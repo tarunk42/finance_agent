@@ -1,0 +1,121 @@
+{
+    "tools": [
+      {
+        "name": "StockMarketTool",
+        "description": "Tool to fetch real-time and historical stock market data.",
+        "functions": {
+          "get_stock_price": {
+            "description": "Fetches real-time stock price.",
+            "parameters": {
+              "ticker": "Stock symbol (e.g., TSLA, AAPL)."
+            }
+          },
+          "get_historical_stock": {
+            "description": "Fetches historical stock data for trend analysis.",
+            "parameters": {
+              "ticker": "Stock symbol (e.g., TSLA, AAPL).",
+              "days": "Number of past days to fetch data for."
+            }
+          }
+        }
+      },
+      {
+        "name": "CryptoMarketTool",
+        "description": "Tool to fetch real-time and historical cryptocurrency market data.",
+        "functions": {
+          "get_crypto_price": {
+            "description": "Fetches real-time cryptocurrency price.",
+            "parameters": {
+              "symbol": "Crypto symbol (e.g., BTC/USDT)."
+            }
+          },
+          "get_historical_crypto": {
+            "description": "Fetches historical cryptocurrency data.",
+            "parameters": {
+              "symbol": "Crypto symbol (e.g., BTC/USDT).",
+              "days": "Number of past days to fetch data for."
+            }
+          }
+        }
+      },
+      {
+        "name": "NewsAPITool",
+        "description": "Tool to fetch financial news from NewsAPI.org.",
+        "functions": {
+          "fetch_news": {
+            "description": "Fetch financial news related to a given query.",
+            "parameters": {
+              "query": "Keywords to search for (e.g., Tesla, Bitcoin).",
+              "language": "Language of the articles (default: en).",
+              "from_date": "Starting date for news search.",
+              "sort_by": "Sorting method (relevancy, popularity, publishedAt).",
+              "max_results": "Number of articles to return."
+            }
+          },
+          "fetch_stock_news": {
+            "description": "Fetch stock-related news by searching the stock symbol.",
+            "parameters": {
+              "ticker": "Stock symbol (e.g., TSLA, AAPL).",
+              "max_results": "Number of articles to return."
+            }
+          },
+          "fetch_crypto_news": {
+            "description": "Fetch cryptocurrency-related news.",
+            "parameters": {
+              "crypto_name": "Cryptocurrency name (e.g., Bitcoin, Ethereum).",
+              "max_results": "Number of articles to return."
+            }
+          }
+        }
+      },
+      {
+        "name": "SentimentAnalysisTool",
+        "description": "Tool to analyze sentiment of financial text (news headlines, tweets).",
+        "functions": {
+          "analyze_sentiment": {
+            "description": "Analyzes sentiment of the given text.",
+            "parameters": {
+              "text": "Financial news headline or tweet."
+            }
+          }
+        }
+      },
+      {
+        "name": "TrendAnalysisTool",
+        "description": "Tool to analyze financial trends using SMA, EMA, RSI, and MACD.",
+        "functions": {
+          "calculate_sma": {
+            "description": "Computes Simple Moving Average (SMA).",
+            "parameters": {
+              "df": "DataFrame with 'Close' prices.",
+              "period": "Lookback period for SMA."
+            }
+          },
+          "calculate_ema": {
+            "description": "Computes Exponential Moving Average (EMA).",
+            "parameters": {
+              "df": "DataFrame with 'Close' prices.",
+              "period": "Lookback period for EMA."
+            }
+          },
+          "calculate_rsi": {
+            "description": "Computes Relative Strength Index (RSI).",
+            "parameters": {
+              "df": "DataFrame with 'Close' prices.",
+              "period": "Lookback period for RSI."
+            }
+          },
+          "calculate_macd": {
+            "description": "Computes Moving Average Convergence Divergence (MACD).",
+            "parameters": {
+              "df": "DataFrame with 'Close' prices.",
+              "short_period": "Fast EMA period.",
+              "long_period": "Slow EMA period.",
+              "signal_period": "Signal line period."
+            }
+          }
+        }
+      }
+    ]
+  }
+  
