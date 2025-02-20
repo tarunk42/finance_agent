@@ -1,30 +1,34 @@
-import yfinance as yf
+import aiohttp
+from pydantic import BaseModel, Field
+from langchain_core.tools import BaseTool
+from typing import Type, Any, Dict
 import requests
-import pandas as pd
-from datetime import datetime, timedelta
-
-fmp_api_key = "kU2hUzzdfrgjUILx7siQiCCdGGXAWOvc"
-
-
+import json
 import yfinance as yf
-import requests
 from datetime import datetime, timedelta
+import os
+import sys
 
-# Financial Modeling Prep API Key
-FMP_API_KEY = fmp_api_key
+# Get the absolute path of the finance_agents directory
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+import config
 
-class StockMarketTool:
-    """
-    Tool to fetch real-time and historical stock market data with fallback.
-    """
+class StockPriceInput(BaseModel):
+    ticker: str = Field(description="Stock ticker symbol (e.g., AAPL for Apple).")
+
+class HistoricalStockInput(BaseModel):
+    ticker: str = Field(description="Stock ticker symbol (e.g., AAPL for Apple).")
+    days: int = Field(default=30, description="Number of past days for historical data.")
+
+class StockMarketTool(BaseTool):
+    name: str = "stock_market"
+    description: str = "Fetches real-time and historical stock market data."
+    api_key: str = config.FMP_API_KEY
     
-    @staticmethod
-    def get_stock_price(ticker):
-        """
-        Fetches real-time stock price, first attempting Yahoo Finance, then Financial Modeling Prep API as fallback.
-        """
+    def _fetch_yahoo_finance_price(self, ticker: str) -> Dict[str, Any]:
+        """Fetch stock price using Yahoo Finance."""
         try:
-            # Attempt to fetch data from Yahoo Finance
             stock = yf.Ticker(ticker)
             data = stock.history(period="1d")
             if not data.empty:
@@ -35,19 +39,14 @@ class StockMarketTool:
                     "low": round(data["Low"].iloc[-1], 2),
                     "volume": int(data["Volume"].iloc[-1]),
                     "timestamp": str(datetime.now()),
-                    # "provider": "Yahoo Finance"
                 }
         except Exception as e:
-            error_msg = str(e).lower()
-            # if "too many requests" in error_msg or "rate limit" in error_msg:
-            #     print("Yahoo Finance API rate limit hit. Switching to fallback API...")
-            # else:
-            #     print(f"Yahoo Finance retrieval failed: {str(e)}")
-        
-        # Ensure fallback execution if Yahoo Finance fails
-        # print("Falling back to Financial Modeling Prep API...")
+            return {}
+    
+    def _fetch_fmp_price(self, ticker: str) -> Dict[str, Any]:
+        """Fetch stock price using Financial Modeling Prep API."""
         try:
-            url = f"https://financialmodelingprep.com/api/v3/quote/{ticker}?apikey={FMP_API_KEY}"
+            url = f"https://financialmodelingprep.com/api/v3/quote/{ticker}?apikey={self.api_key}"
             response = requests.get(url)
             if response.status_code == 200:
                 data = response.json()
@@ -59,20 +58,27 @@ class StockMarketTool:
                         "low": round(data[0]['dayLow'], 2),
                         "volume": int(data[0]['volume']),
                         "timestamp": str(datetime.now()),
-                        # "provider": "Financial Modeling Prep"
                     }
         except Exception as e:
-            # print(f"FMP API retrieval failed: {str(e)}")
             return {}
+    
+    def _run(self, ticker: str) -> Dict[str, Any]:
+        """Synchronous method to fetch stock price."""
+        result = self._fetch_yahoo_finance_price(ticker)
+        return result if result else self._fetch_fmp_price(ticker)
+    
+    async def _arun(self, ticker: str) -> Dict[str, Any]:
+        """Asynchronous method to fetch stock price."""
+        result = self._fetch_yahoo_finance_price(ticker)
+        return result if result else self._fetch_fmp_price(ticker)
 
-        
-        # return {"error": f"No stock data available for {ticker} from any source."}
-
-    @staticmethod
-    def get_historical_stock(ticker, days=30):
-        """
-        Fetches historical stock data for trend analysis, attempting Yahoo Finance first and FMP as fallback.
-        """
+class HistoricalStockMarketTool(BaseTool):
+    name: str = "historical_stock_market"
+    description: str = "Fetches historical stock market data."
+    api_key: str = config.FMP_API_KEY
+    
+    def _fetch_yahoo_finance_historical(self, ticker: str, days: int) -> Dict[str, Any]:
+        """Fetch historical stock data using Yahoo Finance."""
         try:
             end_date = datetime.today().strftime("%Y-%m-%d")
             start_date = (datetime.today() - timedelta(days=days)).strftime("%Y-%m-%d")
@@ -82,19 +88,14 @@ class StockMarketTool:
                 return {
                     "ticker": ticker,
                     "historical_data": data[["Open", "High", "Low", "Close", "Volume"]].to_dict(orient="records"),
-                    "provider": "Yahoo Finance"
                 }
         except Exception as e:
-            error_msg = str(e).lower()
-            # if "too many requests" in error_msg or "rate limit" in error_msg:
-            #     print("Yahoo Finance API rate limit hit. Switching to fallback API...")
-            # else:
-            #     print(f"Yahoo Finance historical retrieval failed: {str(e)}")
-        
-        # Ensure fallback execution if Yahoo Finance fails
-        # print("Falling back to Financial Modeling Prep API for historical data...")
+            return {}
+    
+    def _fetch_fmp_historical(self, ticker: str, days: int) -> Dict[str, Any]:
+        """Fetch historical stock data using Financial Modeling Prep API."""
         try:
-            url = f"https://financialmodelingprep.com/api/v3/historical-price-full/{ticker}?timeseries={days}&apikey={FMP_API_KEY}"
+            url = f"https://financialmodelingprep.com/api/v3/historical-price-full/{ticker}?timeseries={days}&apikey={self.api_key}"
             response = requests.get(url)
             if response.status_code == 200:
                 data = response.json()
@@ -111,63 +112,28 @@ class StockMarketTool:
                                 "volume": record["volume"]
                             } for record in data["historical"]
                         ],
-                        # "provider": "Financial Modeling Prep"
                     }
         except Exception as e:
             return {}
-        #     print(f"FMP API historical retrieval failed: {str(e)}")
-        
-        # return {"error": f"No historical stock data available for {ticker} from any source."}
+    
+    def _run(self, ticker: str, days: int = 30) -> Dict[str, Any]:
+        """Synchronous method to fetch historical stock data."""
+        result = self._fetch_yahoo_finance_historical(ticker, days)
+        return result if result else self._fetch_fmp_historical(ticker, days)
+    
+    async def _arun(self, ticker: str, days: int = 30) -> Dict[str, Any]:
+        """Asynchronous method to fetch historical stock data."""
+        result = self._fetch_yahoo_finance_historical(ticker, days)
+        return result if result else self._fetch_fmp_historical(ticker, days)
 
 
 
 
+# stock_tool = StockMarketTool()
+# historical_stock_tool = HistoricalStockMarketTool()
 
 
-
-# class StockMarketTool:
-#     """
-#     Tool to fetch real-time and historical stock market data.
-#     """
-
-#     @staticmethod
-#     def get_stock_price(ticker):
-#         """
-#         Fetches real-time stock price.
-#         """
-#         try:
-#             stock = yf.Ticker(ticker)
-#             data = stock.history(period="1d")
-#             if data.empty:
-#                 return {"error": f"No data found for {ticker}"}
-
-#             return {
-#                 "ticker": ticker,
-#                 "latest_price": round(data["Close"].iloc[-1], 2),
-#                 "high": round(data["High"].iloc[-1], 2),
-#                 "low": round(data["Low"].iloc[-1], 2),
-#                 "volume": int(data["Volume"].iloc[-1]),
-#                 "timestamp": str(datetime.now())
-#             }
-
-#         except Exception as e:
-#             return {"error": f"Stock price retrieval failed: {str(e)}"}
-
-#     @staticmethod
-#     def get_historical_stock(ticker, days=30):
-#         """
-#         Fetches historical stock data for trend analysis.
-#         """
-#         try:
-#             end_date = datetime.today().strftime("%Y-%m-%d")
-#             start_date = (datetime.today() - timedelta(days=days)).strftime("%Y-%m-%d")
-
-#             stock = yf.Ticker(ticker)
-#             data = stock.history(start=start_date, end=end_date)
-#             if data.empty:
-#                 return {"error": f"No historical data found for {ticker}"}
-
-#             return data[["Open", "High", "Low", "Close", "Volume"]].to_dict(orient="records")
-
-#         except Exception as e:
-#             return {"error": f"Historical stock data retrieval failed: {str(e)}"}
+# ticker = "AAPL"
+# print("Fetching real-time stock price for:", ticker)
+# stock_price_result = stock_tool._run(ticker)
+# print(stock_price_result)

@@ -1,42 +1,43 @@
 import requests
+from pydantic import BaseModel, Field
+from langchain_core.tools import BaseTool
+from typing import Type, Any, Dict, List
 from datetime import datetime, timedelta
+import config
 
-class NewsAPITool:
-    """
-    Tool to fetch financial news from NewsAPI.org.
-    """
+class NewsAPIInput(BaseModel):
+    query: str = Field(default="stocks", description="Keywords to search for (e.g., Tesla, Bitcoin).")
+    language: str = Field(default="en", description="Language of the articles.")
+    from_date: str = Field(default=None, description="Date filter (defaults to yesterday for free tier).")
+    sort_by: str = Field(default="publishedAt", description="Sorting method (relevancy, popularity, publishedAt).")
+    max_results: int = Field(default=5, description="Number of articles to return.")
 
-    BASE_URL = "https://newsapi.org/v2/everything"
-    API_KEY = "5ae6adf1cd5b49a48d64dd51fbec18c5"
-
-    @staticmethod
-    def fetch_news(query="stocks", language="en", from_date=None, sort_by="publishedAt", max_results=5):
-        """
-        Fetch financial news related to a given query.
-        :param query: Keywords to search for (e.g., "Tesla", "Bitcoin").
-        :param language: Language of the articles.
-        :param from_date: Date filter (defaults to yesterday for free tier).
-        :param sort_by: Sorting method ("relevancy", "popularity", "publishedAt").
-        :param max_results: Number of articles to return.
-        :return: List of news articles.
-        """
+class NewsAPITool(BaseTool):
+    name: str = "news_api"
+    description: str = "Fetches financial news from NewsAPI.org."
+    api_key: str = config.NEWS_API_KEY
+    
+    BASE_URL: str = "https://newsapi.org/v2/everything"
+    
+    def _fetch_news(self, query: str, language: str, from_date: str, sort_by: str, max_results: int) -> List[Dict[str, Any]]:
+        """Fetch financial news related to a given query."""
         if from_date is None:
-            from_date = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")  # Default: Yesterday's news
+            from_date = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
 
         params = {
             "q": query,
             "language": language,
             "from": from_date,
             "sortBy": sort_by,
-            "apiKey": NewsAPITool.API_KEY
+            "apiKey": self.api_key
         }
 
         try:
-            response = requests.get(NewsAPITool.BASE_URL, params=params)
+            response = requests.get(self.BASE_URL, params=params)
             data = response.json()
 
             if data.get("status") != "ok":
-                return {"error": f"News API error: {data.get('message', 'Unknown error')}"}
+                return [{"error": f"News API error: {data.get('message', 'Unknown error')}"}]
 
             articles = data.get("articles", [])[:max_results]
             return [
@@ -47,26 +48,33 @@ class NewsAPITool:
                     "url": article["url"]
                 } for article in articles
             ]
-
         except Exception as e:
-            return {"error": f"Failed to retrieve news: {str(e)}"}
+            return [{"error": f"Failed to retrieve news: {str(e)}"}]
+    
+    def _run(self, query: str = "stocks", language: str = "en", from_date: str = None, sort_by: str = "publishedAt", max_results: int = 5) -> List[Dict[str, Any]]:
+        """Synchronous method to fetch news."""
+        return self._fetch_news(query, language, from_date, sort_by, max_results)
+    
+    async def _arun(self, query: str = "stocks", language: str = "en", from_date: str = None, sort_by: str = "publishedAt", max_results: int = 5) -> List[Dict[str, Any]]:
+        """Asynchronous method to fetch news."""
+        return self._fetch_news(query, language, from_date, sort_by, max_results)
 
-    @staticmethod
-    def fetch_stock_news(ticker, max_results=5):
-        """
-        Fetch stock-related news by searching the stock symbol.
-        :param ticker: Stock ticker (e.g., "AAPL", "TSLA").
-        :param max_results: Number of articles to return.
-        :return: List of news articles.
-        """
-        return NewsAPITool.fetch_news(query=ticker, max_results=max_results)
+class StockNewsTool(BaseTool):
+    name: str = "stock_news"
+    description: str = "Fetches stock-related news from NewsAPI.org."
+    api_key: str = config.NEWS_API_KEY
+    
+    def _run(self, ticker: str, max_results: int = 5) -> List[Dict[str, Any]]:
+        """Fetch stock-related news by searching the stock symbol."""
+        news_tool = NewsAPITool(api_key=self.api_key)
+        return news_tool._fetch_news(query=ticker, language="en", from_date=None, sort_by="publishedAt", max_results=max_results)
 
-    @staticmethod
-    def fetch_crypto_news(crypto_name, max_results=5):
-        """
-        Fetch cryptocurrency-related news.
-        :param crypto_name: Cryptocurrency name (e.g., "Bitcoin", "Ethereum").
-        :param max_results: Number of articles to return.
-        :return: List of news articles.
-        """
-        return NewsAPITool.fetch_news(query=crypto_name, max_results=max_results)
+class CryptoNewsTool(BaseTool):
+    name: str = "crypto_news"
+    description: str = "Fetches cryptocurrency-related news from NewsAPI.org."
+    api_key: str = config.NEWS_API_KEY
+    
+    def _run(self, crypto_name: str, max_results: int = 5) -> List[Dict[str, Any]]:
+        """Fetch cryptocurrency-related news."""
+        news_tool = NewsAPITool(api_key=self.api_key)
+        return news_tool._fetch_news(query=crypto_name, language="en", from_date=None, sort_by="publishedAt", max_results=max_results)
