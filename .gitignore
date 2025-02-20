@@ -8,3 +8,4 @@ __pycache__/
 # pyenv
 .python-version
 .agenv
+.env
