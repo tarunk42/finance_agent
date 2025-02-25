@@ -14,21 +14,21 @@ from tools import *
 
 
 class AgentManager:
-    """Manages the Market Insights Agent and tool execution."""
+    """Manages specialized agents and tool execution."""
 
-    def __init__(self):
-        # Load system prompt
-        self.system_prompt = SYSTEM_PROMPTS["financial_assistant"]
+    def __init__(self, agent_type="financial_assistant"):
+        """Initialize the agent with the appropriate system prompt."""
+        self.agent_type = agent_type
+        self.system_prompt = SYSTEM_PROMPTS.get(agent_type, "You are an AI assistant.")  # Default if not found
 
-        # Dynamically load tools
+        # Dynamically load relevant tools
         self.tools = []
         for tool_name in TOOL_REGISTRY:
-            tool_class = globals().get(tool_name, None)  # Safe lookup
+            tool_class = globals().get(tool_name, None)  
             if tool_class:
                 self.tools.append(tool_class())
-        
-        # Log which tools are loaded
-        print(f"Loaded Tools: {[tool.name for tool in self.tools]}")
+
+        print(f"🔧 Loaded Tools: {[tool.name for tool in self.tools]}")
 
         # Initialize LLM
         self.model = ChatOpenAI(
@@ -42,9 +42,8 @@ class AgentManager:
             tools=self.tools
         )
 
-
     def process_query(self, query: str):
-        """Executes the agent with a given query and formats the response."""
+        """Processes a query using the correct system prompt."""
         print(f"🔍 Processing Query: {query}")
 
         chunks = self.agent.stream({
@@ -56,7 +55,7 @@ class AgentManager:
         
         formatted_response = []
         for chunk in chunks:
-            print(f"🛠️ Debug: {chunk}")  # Log raw response from agent
+            print(f"🛠️ Debug: {chunk}")
             if "agent" in chunk and "messages" in chunk["agent"]:
                 last_message = chunk["agent"]["messages"][-1]
                 if isinstance(last_message, AIMessage):
@@ -65,5 +64,3 @@ class AgentManager:
                     formatted_response.append("No valid AI response.")
 
         return "\n".join(formatted_response)
-
-

@@ -11,30 +11,50 @@ OPEN_WEATHER_API_KEY = os.getenv("OPEN_WEATHER_API_KEY")
 SERP_API_KEY = os.getenv("SERP_API_KEY")
 FMP_API_KEY = os.getenv("FMP_API_KEY")
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
+EXCHANGE_RATE_API_KEY = os.getenv("EXCHANGE_RATE_API_KEY")
 
 # OpenAI Model Selection
 OPENAI_MODEL = 'gpt-4o-mini'
 
 # System Prompt
 SYSTEM_PROMPTS = {
-    "financial_assistant": """You are a financial assistant specialized in stock market insights, trend analysis, 
-    financial news, and sentiment analysis. 
+    "financial_assistant": """You are a financial assistant specializing in stock market insights, 
+    trend analysis, financial news, and sentiment analysis. You also occasionally assist with personal tasks.
 
     **Instructions:**
-    - **Always use the appropriate tools before answering.**  
+    - **Use the correct tools before answering.**  
     - If asked about stock prices, call `StockMarketTool`.  
     - If asked about financial news, call `NewsAPITool`.  
-    - If unsure, ask the user for clarification **instead of assuming**.  
-    - Do NOT provide generic responses like "I cannot access real-time data". **Always attempt to fetch data first**.
+    - If unsure, ask the user for clarification **instead of assuming**.
 
     **Example Usage:**
     - User: "What’s Tesla’s stock price today?"  
-      - ✅ Correct: Call `StockMarketTool("TSLA")`  
-      - ❌ Wrong: "I cannot access real-time stock prices."
-    
+      ✅ Correct: Call `StockMarketTool("TSLA")`
+
     Think step by step before responding.
+    """,
+
+    "utility_assistant": """You are a general-purpose assistant that helps with tasks unrelated to finance. 
+    You handle reminders, weather updates, Wikipedia searches, unit conversions, and general queries.
+
+    **Instructions:**
+    - **Use the correct tools before answering.**  
+    - If asked about the weather, call `WeatherTool`.  
+    - If asked to search Wikipedia, call `WikipediaTool`.  
+    - If asked to set a reminder, call `CalendarReminderTool`. For dates in words such as "tomorrow" or "next week", use `DateTimeTool`.
+    - If asked about unit conversion, call `UnitConversionTool`.  
+    - If unsure, ask the user for clarification **instead of assuming**.
+
+    **Example Usage:**
+    - User: "What’s the weather in New York?"  
+      ✅ Correct: Call `WeatherTool("New York")`
+    - User: "Convert 10 km to miles."  
+      ✅ Correct: Call `UnitConversionTool("10 km to miles")`
+
+    Follow these steps before responding.
     """
 }
+
 
 
 # Tool Registry (List of tools to be loaded dynamically)
@@ -45,4 +65,14 @@ TOOL_REGISTRY = [
     "NewsAPITool",
     "SentimentAnalysisTool",
     "CryptoMarketTool",
+    "DateTimeTool",
+    "UnitConversionTool",
+    "TimeZoneTool",
+    "CalculatorTool",
+    "WikipediaTool",
+    "SearchTool",
+    "CurrencyExchangeTool",
+    "WeatherTool",
+    "CalendarReminderTool",
 ]
+
