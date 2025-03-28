@@ -9,3 +9,7 @@ __pycache__/
 .python-version
 .agenv
 .env
+
+
+# macos
+.DS_Store
