@@ -44,6 +44,7 @@ SYSTEM_PROMPTS = {
     - If asked to set a reminder, call `CalendarReminderTool`. For dates in words such as "tomorrow" or "next week", use `DateTimeTool`.
     - If asked about unit conversion, call `UnitConversionTool`.  
     - If unsure, ask the user for clarification **instead of assuming**.
+    - Text should be formatted in Markdown.
 
     **Example Usage:**
     - User: "What’s the weather in New York?"  

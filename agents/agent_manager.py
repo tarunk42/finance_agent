@@ -42,25 +42,94 @@ class AgentManager:
             tools=self.tools
         )
 
-    def process_query(self, query: str):
-        """Processes a query using the correct system prompt."""
-        print(f"🔍 Processing Query: {query}")
+    def process_query(self, query: str, history: list = None, image: dict = None):
+        """Processes a query using the correct system prompt and optional history."""
+        print(f"🔍 Processing Query: '{query}' with history length: {len(history) if history else 0}")
 
-        chunks = self.agent.stream({
-            "messages": [
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": query}
-            ]
-        })
+        messages_for_agent = []
+        # Add system prompt first
+        messages_for_agent.append({"role": "system", "content": self.system_prompt})
+        
+        # Add existing history
+        if history:
+            messages_for_agent.extend(history)
+        
+        # Prepare content for the user's message
+        user_message_content = []
+        if query: # Add text part if query is not empty
+            user_message_content.append({"type": "text", "text": query})
+
+        if image:
+            user_message_content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{image['media_type']};base64,{image['data']}"
+                }
+            })
+        
+        # Add current user query (with image if present)
+        if user_message_content: # Only add if there's text or an image
+            messages_for_agent.append({"role": "user", "content": user_message_content})
+        elif not query and not image: # Handle case where both query and image are empty, though frontend should prevent this
+            print("AgentManager: Warning - process_query called with empty query and no image.")
+            # Decide on behavior: maybe return an error or a default message
+            # For now, let's allow it to proceed, agent might handle empty input.
+            # Or, append an empty user message if required by the agent structure:
+            # messages_for_agent.append({"role": "user", "content": ""})
+            pass
+
+
+        
+        print(f"AgentManager: Total messages being sent to agent: {len(messages_for_agent)}")
+        # For debugging, you might want to print the full messages_for_agent if issues persist
+        # for i, msg in enumerate(messages_for_agent):
+        #     print(f"  Msg {i}: Role='{msg['role']}', Content='{msg['content'][:100]}...'")
+
+
+        chunks = self.agent.stream({"messages": messages_for_agent})
         
         formatted_response = []
+        tool_outputs = [] # To store data from tool calls
+        import json # Ensure json is imported
+
         for chunk in chunks:
             print(f"🛠️ Debug: {chunk}")
             if "agent" in chunk and "messages" in chunk["agent"]:
                 last_message = chunk["agent"]["messages"][-1]
                 if isinstance(last_message, AIMessage):
                     formatted_response.append(last_message.content)
-                else:
-                    formatted_response.append("No valid AI response.")
+                # else: # No need for "No valid AI response" here as we only care about AIMessage content for final response
+                #     formatted_response.append("No valid AI response.")
+            elif "tools" in chunk and "messages" in chunk["tools"]:
+                for tool_message in chunk["tools"]["messages"]:
+                    if hasattr(tool_message, 'content') and hasattr(tool_message, 'name'):
+                        try:
+                            # Attempt to parse the JSON content of the tool message
+                            tool_data_content = json.loads(tool_message.content)
+                            tool_outputs.append({
+                                "tool_name": tool_message.name,
+                                "tool_call_id": tool_message.tool_call_id if hasattr(tool_message, 'tool_call_id') else None,
+                                "data": tool_data_content
+                            })
+                        except json.JSONDecodeError:
+                            # If content is not valid JSON, store it as a raw string
+                            tool_outputs.append({
+                                "tool_name": tool_message.name,
+                                "tool_call_id": tool_message.tool_call_id if hasattr(tool_message, 'tool_call_id') else None,
+                                "raw_content": tool_message.content,
+                                "error": "Content is not valid JSON"
+                            })
+                        except Exception as e:
+                            print(f"AgentManager: Error processing tool message content: {e}")
+                            tool_outputs.append({
+                                "tool_name": tool_message.name,
+                                "tool_call_id": tool_message.tool_call_id if hasattr(tool_message, 'tool_call_id') else None,
+                                "error": f"Error processing tool message: {str(e)}"
+                            })
 
-        return "\n".join(formatted_response)
+
+        final_response_text = "\n".join(formatted_response).strip()
+        if not final_response_text: # Ensure there's always some text response
+            final_response_text = "Agent processed the request."
+            
+        return {"text_response": final_response_text, "tool_outputs": tool_outputs}
