@@ -43,7 +43,12 @@ class ChatResponse(BaseModel):
     tool_outputs: Optional[List[Dict]] = Field(default_factory=list)
 
 # --- FastAPI App Setup ---
-app = FastAPI(title="Finance Agent API V2")
+app = FastAPI(
+    title="Finance Agent API V2",
+    docs_url=None,
+    redoc_url=None
+)
+
 
 # --- CORS Middleware Configuration ---
 # app.add_middleware(
