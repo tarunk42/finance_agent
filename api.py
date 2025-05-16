@@ -13,7 +13,7 @@ sys.path.append(PROJECT_ROOT)
 
 # Conditional import for AgentManager
 try:
-    from finance_agents.agents.agent_manager import AgentManager
+    from agents.agent_manager import AgentManager
 except ImportError:
     print("Warning: Could not import AgentManager. Ensure it's correctly placed and has no import errors.")
     AgentManager = None 
