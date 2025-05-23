@@ -5,6 +5,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
+
+# Attempt to import SYSTEM_PROMPTS from config for lifespan management
+try:
+    from config import SYSTEM_PROMPTS
+except ImportError:
+    print("Warning: Could not import SYSTEM_PROMPTS from config. Lifespan manager might not initialize all agent types.")
+    SYSTEM_PROMPTS = {}
 
 # Add project root to sys.path for agent_manager import
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -16,7 +24,7 @@ try:
     from agents.agent_manager import AgentManager
 except ImportError:
     print("Warning: Could not import AgentManager. Ensure it's correctly placed and has no import errors.")
-    AgentManager = None 
+    AgentManager = None
 
 # Load environment variables
 dotenv_path = os.path.join(PROJECT_ROOT, '.env')
@@ -42,11 +50,45 @@ class ChatResponse(BaseModel):
     response: str
     tool_outputs: Optional[List[Dict]] = Field(default_factory=list)
 
+# --- Global Store for Agent Managers ---
+agent_managers_store: Dict[str, AgentManager] = {}
+
+# --- Lifespan Management for AgentManager Initialization ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("API: Application startup...")
+    if AgentManager is None:
+        print("API: CRITICAL - AgentManager class not imported. Cannot initialize agent managers.")
+    else:
+        print("API: Initializing AgentManagers...")
+        # Initialize for each agent type defined in SYSTEM_PROMPTS
+        # Fallback to a default if SYSTEM_PROMPTS is empty or not loaded
+        agent_types_to_load = list(SYSTEM_PROMPTS.keys())
+        if not agent_types_to_load and AgentManager: # If SYSTEM_PROMPTS is empty but AgentManager exists
+             print("API: Warning - SYSTEM_PROMPTS is empty. Attempting to load default 'financial_assistant'.")
+             agent_types_to_load.append("financial_assistant")
+
+
+        for agent_type_name in agent_types_to_load:
+            try:
+                if agent_type_name not in agent_managers_store: # Avoid re-initialization if somehow called multiple times
+                    agent_managers_store[agent_type_name] = AgentManager(agent_type=agent_type_name)
+                    print(f"API: AgentManager for '{agent_type_name}' initialized successfully.")
+            except Exception as e:
+                print(f"API: CRITICAL - Failed to initialize AgentManager for '{agent_type_name}': {e}")
+                # Optionally, re-raise or handle to prevent app start with missing critical agents
+    
+    yield
+    
+    print("API: Application shutdown. Clearing AgentManagers...")
+    agent_managers_store.clear()
+
 # --- FastAPI App Setup ---
 app = FastAPI(
     title="Finance Agent API V2",
     docs_url=None,
-    redoc_url=None
+    redoc_url=None,
+    lifespan=lifespan
 )
 
 
@@ -84,12 +126,19 @@ async def handle_chat(request_data: ChatRequest):
         print("API: Error - AgentManager module was not imported successfully.")
         raise HTTPException(status_code=503, detail="AgentManager is not initialized. Check server logs for import errors.")
 
-    agent_manager = None 
+    agent_manager = agent_managers_store.get(request_data.agent_type)
+
+    if agent_manager is None:
+        # This means either the agent_type is invalid or initialization failed for it during startup
+        print(f"API: Error - AgentManager for type '{request_data.agent_type}' is not available or not initialized.")
+        # Check if the agent type was supposed to be loaded
+        if request_data.agent_type not in SYSTEM_PROMPTS and request_data.agent_type != "financial_assistant": # financial_assistant is a fallback
+             detail_msg = f"AgentManager for type '{request_data.agent_type}' is invalid."
+        else:
+             detail_msg = f"AgentManager for type '{request_data.agent_type}' is not available. Check server startup logs for initialization errors."
+        raise HTTPException(status_code=503, detail=detail_msg)
+
     try:
-        print(f"API: Attempting to initialize AgentManager for agent_type: '{request_data.agent_type}'")
-        agent_manager = AgentManager(agent_type=request_data.agent_type)
-        print("API: AgentManager initialized successfully.")
-        
         history_for_agent = [{"role": msg.role, "content": msg.content} for msg in request_data.history] if request_data.history else []
 
         print(f"API: Attempting to process query: '{request_data.query}' with history_length: {len(history_for_agent)}")
@@ -127,4 +176,4 @@ async def handle_chat(request_data: ChatRequest):
 # --- How to Run ---
 # From the project root directory (super_agent):
 # source agenv/bin/activate
-# uvicorn finance_agents.api:app --host 0.0.0.0 --port 5050 --reload
+# uvicorn finance_agents.api:app --host 0.0.0.0 --port 10000 --reload

@@ -98,6 +98,7 @@ class AgentManager:
                 last_message = chunk["agent"]["messages"][-1]
                 if isinstance(last_message, AIMessage):
                     formatted_response.append(last_message.content)
+                    # print("\n\n\nChunk size:", len(last_message.content), "\n\n\n\n") # Debugging line for chunk size
                 # else: # No need for "No valid AI response" here as we only care about AIMessage content for final response
                 #     formatted_response.append("No valid AI response.")
             elif "tools" in chunk and "messages" in chunk["tools"]:
@@ -131,5 +132,12 @@ class AgentManager:
         final_response_text = "\n".join(formatted_response).strip()
         if not final_response_text: # Ensure there's always some text response
             final_response_text = "Agent processed the request."
+
+        # Print the size of tool_outputs
+        # try:
+        #     tool_outputs_size = len(json.dumps(tool_outputs))
+        #     print(f"\n\n\nAgentManager: Approximate size of tool_outputs: {tool_outputs_size} bytes\n\n\n")
+        # except Exception as e:
+        #     print(f"\n\n\nAgentManager: Error calculating size of tool_outputs: {e}\n\n\n")
             
-        return {"text_response": final_response_text, "tool_outputs": tool_outputs}
+        # return {"text_response": final_response_text, "tool_outputs": tool_outputs}
