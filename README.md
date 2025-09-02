@@ -6,6 +6,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com/)
 [![LangChain](https://img.shields.io/badge/LangChain-0.3+-orange.svg)](https://www.langchain.com/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-purple.svg)](https://openai.com/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-red.svg)](LICENSE)
 
 **An intelligent multi-agent system for financial analysis and utility tasks**
@@ -196,7 +197,57 @@ curl -X POST https://lively-intimate-treefrog.ngrok-free.app/chat \
    uvicorn api:app --host 0.0.0.0 --port 10000 --reload
    ```
 
+### 🐳 Docker Installation
+
+For containerized deployment, use Docker:
+
+1. **Prerequisites**
+   - Docker installed on your system
+   - Docker Compose (optional, for advanced setups)
+
+2. **Build the Docker image**
+   ```bash
+   docker build -t finance-agent:latest .
+   ```
+
+3. **Run the container**
+   ```bash
+   docker run -p 10000:10000 --env-file .env finance-agent:latest
+   ```
+
+4. **Access the application**
+   - Open http://localhost:10000 in your browser
+   - API endpoint: http://localhost:10000/chat
+
+#### Docker Compose (Recommended)
+
+Create a `docker-compose.yml` file:
+
+```yaml
+version: '3.8'
+services:
+  finance-agent:
+    build: .
+    ports:
+      - "10000:10000"
+    env_file:
+      - .env
+    restart: unless-stopped
+```
+
+Then run:
+```bash
+docker-compose up -d
+```
+
+#### Docker Tags
+
+- `latest`: Latest stable version
+- `v1.0.0`: Specific version tags
+
 ---
+
+
 
 ## ⚙️ Configuration
 
