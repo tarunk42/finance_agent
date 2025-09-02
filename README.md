@@ -6,17 +6,15 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com/)
 [![LangChain](https://img.shields.io/badge/LangChain-0.3+-orange.svg)](https://www.langchain.com/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-purple.svg)](https://openai.com/)
-[![License](https://img.shields.io/badge![Response Exa- **Website**: [tarunk42.github.io](https://tarunk42.github.io)
-
----
-
-## 📄 License(https://github.com/tarunk42/finance_agent/blob/main/run_example/Screenshot%202025-09-02%20at%2023.10.18.png)
-
----
-
-## 👤 Authornse-MIT-red.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-red.svg)](LICENSE)
 
 **An intelligent multi-agent system for financial analysis and utility tasks**
+
+[🚀 Live Demo](#-live-demo) • [📖 Documentation](#-documentation) • [🔧 Installation](#-installation) • [🧪 Testing](#-testing)
+
+</div>
+
+---
 
 [🚀 Live Demo](#-live-demo) • [📖 Documentation](#-documentation) • [🔧 Installation](#-installation) • [🧪 Testing](#-testing)
 
@@ -474,7 +472,7 @@ Here are some screenshots of the Finance Agent in action:
 
 ---
 
-## � Author
+## 👤 Author
 
 **Tarun Kashyap**
 
@@ -484,7 +482,7 @@ Here are some screenshots of the Finance Agent in action:
 
 ---
 
-## �📄 License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -492,7 +490,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Built with ❤️ using modern AI and cloud technologies**
 
 [⬆️ Back to Top](#-finance-agent)
 
