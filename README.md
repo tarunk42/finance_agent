@@ -137,7 +137,7 @@ The system employs a **dual-agent architecture** with specialized agents for fin
 
 The Finance Agent is currently running and accessible via (**might break over time, replace with localhost**):
 
-**🌐 Public URL**: `https://lively-intimate-treefrog.ngrok-free.app`
+**🌐 Public URL**: `https://financeagent-3o3nqpokdvwxjzv7xwbswl.streamlit.app/`
 
 ### Quick Test Commands
 
